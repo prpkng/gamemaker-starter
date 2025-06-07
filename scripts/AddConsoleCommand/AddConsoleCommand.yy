@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"AddConsoleCommand",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"AddConsoleCommand",
+  "parent":{
+    "name":"Plugins",
+    "path":"folders/Plugins.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}
