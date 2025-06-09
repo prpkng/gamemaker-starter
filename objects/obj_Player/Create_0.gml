@@ -1,218 +1,90 @@
-// @description Initialize Variables
+// A state-machine based player controller built for versatility
+event_inherited();
 
-// Define functions
+#macro FLOOR_OBJECTS [obj_Wall, obj_SemiSolidWall]
 
-function setGrounded(_val = true) {
-    isGrounded = _val;
-    coyoteCounter = _val ? coyoteTime : 0;
-    if !_val {
-        currentFloorPlat = noone;
-    }
-}
-function checkForSemisolidPlatform(_x, _y) 
-{
-    // Create a return variable
-    var _id = noone;
-    
-    // We must not be moving upwards, and then we check for a normal collision
-    if yspd >= 0 && place_meeting(_x, _y, obj_SemiSolidWall) {
-        
-        // Create a ds list to store all colliding instances of obj_SemiSolidWall
-        var _list = ds_list_create();
-        var _listSize = instance_place_list(_x, _y, obj_SemiSolidWall, _list, false);
-        
-        // Loop through the colliding instances and only return one of which's top is below the player
-        for (var i = 0; i < _listSize; i++) {
-        	var _listInst = _list[|i];
-            if floor(bbox_bottom <= ceil(_listInst.bbox_top - _listInst.yspd)) {
-                // Return the id of a semisolid platform
-                _id = _listInst;
-                // Exit the loop early
-                break;
-            }
-        }
-        
-        ds_list_destroy(_list);
-    }
-    return _id;
-}
+current_state = "idle";
 
 
 
-// Player variables
-moveDir = 0;
+#region Player parameters
+
 moveSpd = 1.5;
-xspd = 0;
-yspd = 0;
 
-// Jumping
-grav = .275/2;
-terminalVel = 3;
-jumpSpd = -3;
+jumpSpd = -3.25;
 jumpReleaseFactor = 0.75;
 jumpMaxCount = 1;
 jumpCount = jumpMaxCount;
+ascendingGrav = .275/2;
+descendingGrav = .375/2;
+terminalVel = 3.25;
 
+// Other variables
 isJumping = false;
-isGrounded = false;
 
-// Jump buffer
-jumpBufferDuration = 0.135;
-jumpBuffered = false;
-jumpBufferTimer = 0;
+xspd = 0;
+yspd = 0;
 
-// Coyote time
-coyoteTime = 0.10;
-coyoteCounter = 0;
+env_xspd = 0;
 
-// show_debug_overlay(true);
 movePlatMaxYspd = 8;
 currentFloorPlat = noone;
 
-idleSprite = spr_PlayerIdle;
-runSprite = spr_PlayerRun;
+_standingPlatforms = ds_list_create();
 
+#endregion
 
-partSystem = part_system_create(part_PlayerWalkParticles);
-part_system_depth(partSystem, 300);
+// == FUNCTIONS ============
 
+#region EFFECTS
 
-
-/// @desc Gets input
-function getInput() {
-    
-    rightInput = sign(InputCheck(INPUT_VERB.RIGHT));
-    leftInput = sign(InputCheck(INPUT_VERB.LEFT));
-    jumpInputPressed = InputPressed(INPUT_VERB.JUMP);
-    jumpInputReleased = InputReleased(INPUT_VERB.JUMP);
+/// @param {Asset.GMSprite} spr Particle sprite
+function spawnParticle(spr) {
+    instance_create_layer(x, y, layer, obj_Particle).set_sprite(spr);
 }
 
-function applyJumpBuffering() {
-    var dt = delta_time / 1000000;
-    
-    if jumpInputPressed {
-        jumpBufferTimer = jumpBufferDuration;
-    }
-    if jumpBufferTimer > 0 {
-        jumpBuffered = true;
-        jumpBufferTimer -= dt;
-    } else {
-        jumpBuffered = false;
-    }
-}
+#endregion
 
-/// @desc The X movement and collision detection
-function movementX() {
-    moveDir = rightInput - leftInput;
-    xspd = moveDir * moveSpd;
-    
-    // X collision
-    var _subPixel = 0.5;
-    if place_meeting(x + xspd, y, obj_Wall) {
-        
-        // Scoot up to wall precisely
-        var _pixelCheck = _subPixel * sign(xspd);
-        while !place_meeting(x + _pixelCheck, y, obj_Wall) {
-            x += _pixelCheck;
-        }
-        
-        // Collide
-        xspd = 0;
-    }
-    
-    // Actually move now
-    x += xspd;
-}
-function applyGravity() {
-    yspd += grav;
-    if yspd > terminalVel { yspd = terminalVel }
-}
-function applyCoyoteTime() {
-    var dt = delta_time / 1000000
-    coyoteCounter -= dt;
+#region Y SECTION
 
-    if coyoteCounter > 0 {
-        // Reset jump count if grounded
-        jumpCount = 0;
-    } else {
-        // Otherwise, make sure the player cannot do an extra jump after falling of a ledge
-        if jumpCount == 0 { jumpCount = 1; }  
-    }
-}
-function applyJump() {
-    sprite_index = spr_PlayerJump;
-    jumpBuffered = false;
-    jumpBufferTimer = 0;
-    coyoteCounter = 0;
-    
-    // Increase jumpCount
-    jumpCount++;
-    
-    setGrounded(false);
-    isJumping = true;
-    yspd = jumpSpd;
-}
-function releaseJump() {
-    yspd -= yspd * jumpReleaseFactor;
-}
-
-function checkCeilingCollision() {
-    _subPixel = 0.5;
-    if yspd < 0 && place_meeting(x, y + yspd, obj_Wall) {
-           
-        // Scoot up to wall precisely
-        var _pixelCheck = _subPixel * sign(yspd);
-        while !place_meeting(x, y+_pixelCheck, obj_Wall) { 
-            y += _pixelCheck;
-        }
-        
-        // Collide
-        yspd = 0;
-    }
-}
-
-function checkFloorCollision() {
+/// @desc Checks for a platform beneath the player feet, checking for an array of possible "floor" instances
+function determineStandingPlatform() { 
     var _clampYspd = max(0, yspd);
-    var _list = ds_list_create();
-    var _array = array_create(0);
-    array_push(_array, obj_Wall, obj_SemiSolidWall);
-
-    _array[0] = obj_Wall;
-    _array[1] = obj_SemiSolidWall;
-
-    var _listSize = instance_place_list(x, y+1 + _clampYspd + movePlatMaxYspd, _array, _list, false);
+    var _platformCount = instance_place_list(x, y+1 + _clampYspd + movePlatMaxYspd, FLOOR_OBJECTS, _standingPlatforms, false);
 
     // Loop through all 
 
-    for (var i = 0; i < _listSize; i++) 
+    for (var i = 0; i < _platformCount; i++) 
     {
-    	var _listInst = _list[|i];
+    	var _currentPlat = _standingPlatforms[| i];
         
-        // Avoid magnetism
-        if (_listInst.yspd <= yspd || instance_exists(currentFloorPlat)) 
-            && (_listInst.yspd > 0 || place_meeting(x, y+1 + _clampYspd, _listInst))
+        // Avoid caching a platform when we should not (i.e. Jumping)
+        if (_currentPlat.yspd <= yspd // If platform is moving upwards FASTER than the player 
+            || instance_exists(currentFloorPlat)) // Or if the player is already standing at a platform
+            && (_currentPlat.yspd > 0 || place_meeting(x, y+1 + _clampYspd, _currentPlat))
         {
             //Return a solid wall or any semisolid walls that are below the player
-            if _listInst.object_index == obj_Wall 
-                || object_is_ancestor(_listInst.object_index, obj_Wall)
-                || floor(bbox_bottom) <= ceil(_listInst.bbox_top - _listInst.yspd)
+            if _currentPlat.object_index == obj_Wall 
+                || object_is_ancestor(_currentPlat.object_index, obj_Wall)
+                || floor(bbox_bottom) <= ceil(_currentPlat.bbox_top - _currentPlat.yspd)
             {
                  if !instance_exists(currentFloorPlat) 
-                    ||_listInst.bbox_top + _listInst.yspd <= currentFloorPlat.bbox_top + currentFloorPlat.yspd 
-                    || _listInst.bbox_top + _listInst.yspd <= bbox_bottom
+                    ||_currentPlat.bbox_top + _currentPlat.yspd <= currentFloorPlat.bbox_top + currentFloorPlat.yspd 
+                    || _currentPlat.bbox_top + _currentPlat.yspd <= bbox_bottom
                 {
-                    currentFloorPlat = _listInst;
+                    currentFloorPlat = _currentPlat;
                 }
             }
         }
         
     }
-
-    ds_list_destroy(_list);
+    
+    ds_list_clear(_standingPlatforms);
 }
-function ensureStandingOnPlatform() {
-    // One last check to make sure the floor platform is actually below us
 
+/// @desc Checks and make sure the player is standing on a valid platform and, if so, aligns its y position to it
+function ensureStandingOnPlatform() {
+    // Sets 'currentFloorPlat' to noone if said platform ins't below the player anymore
     if instance_exists(currentFloorPlat) && !place_meeting(x, y + movePlatMaxYspd, currentFloorPlat) {
         currentFloorPlat = noone;
     }
@@ -231,15 +103,50 @@ function ensureStandingOnPlatform() {
         
         y = floor(y);
         
-        
-        
         yspd = 0;
-        setGrounded(true);
     }
+}
 
+/// @description Applies movement on the Y axis based on yspd and collision checks
+function applyYMovement() {
+    determineStandingPlatform();
     
+    ensureStandingOnPlatform();
+    
+    // Then, we move  
     y += yspd;
 }
+
+#endregion
+
+#region X SECTION
+
+/// @description Applies movement on the X axis based on xspd
+function applyXMovement() {
+    // X UNIT
+    
+    var _xspd = xspd + env_xspd;
+    
+    var _subPixel = 0.5;
+    if place_meeting(x + _xspd, y, obj_Wall) {
+           
+           // Scoot up to wall precisely
+           var _pixelCheck = _subPixel * sign(_xspd);
+           while !place_meeting(x + _pixelCheck, y, obj_Wall) {
+               x += _pixelCheck;
+           }
+           
+           // Collide
+           _xspd = 0;
+    }
+        
+    // Actually move now
+    x += _xspd;
+}
+
+#endregion
+
+#region PLATFORM FOLLOW
 
 function xMoveWithPlatform() {
     var movePlatXSpd = 0;
@@ -273,12 +180,10 @@ function ySnapToPlatform() {
         || object_is_ancestor(currentFloorPlat.object_index, obj_SemiSolidMovingPlatform)
         || object_is_ancestor(currentFloorPlat.object_index, obj_SemiSolidWall) ) 
     {
-        show_debug_message("standing on vertical moving platform");
         //Snap to the top of the floor platform (un-floor our y variable so it's not choppy
         if !place_meeting(x, currentFloorPlat.bbox_top, obj_Wall) 
             && currentFloorPlat.bbox_top >= bbox_bottom - movePlatMaxYspd {
                 y = currentFloorPlat.bbox_top;
-                show_debug_message("Snap to platform");
         }
         
         // Going up into a solid wall while on a semisolid platform
@@ -301,20 +206,51 @@ function ySnapToPlatform() {
     }
 }
 
-function updateAnimations() {
-    if abs(xspd != 0) {
-        image_xscale = xspd < 0 ? -1 : 1;
-    }
+/// @description Ensures player moves with platform when standing above one
+function followPlatform() {
+    if currentFloorPlat == noone { return; }
     
-    if (isGrounded) {
-        image_speed = 1;
-        if abs(xspd) == 0 {
-            sprite_index = idleSprite;
-        } else {
-            sprite_index = runSprite;
-        }
-    } else {
-    }
+    xMoveWithPlatform();
+    
+    ySnapToPlatform();
 }
 
-print("Initializing player...");
+#endregion
+
+/// @desc Shorthand for checking if the currentStandingPlatform isn't noone
+function checkGrounded() {
+    return currentFloorPlat != noone;
+}
+
+/// @desc Triggers the player to jump and everything that comes with it
+function applyJump() {
+    current_state = "air";
+    
+    // TODO jump buffering and counters
+    jumpBuffered = false;
+    jumpBufferTimer = 0;
+    coyoteCounter = 0;
+    jumpCount++;
+
+    
+    // Spawn particles
+    spawnParticle(spr_JumpParticles);
+    
+    
+    //setGrounded(false);
+    isJumping = true;
+    yspd = jumpSpd;
+    
+    if currentFloorPlat != noone {
+        if sign(xspd) == sign(currentFloorPlat.xspd) {
+            env_xspd = currentFloorPlat.xspd;
+        }
+        if currentFloorPlat.yspd < 0 {
+            yspd += currentFloorPlat.yspd/2;
+        }
+    }
+    
+    currentFloorPlat = noone;
+}
+
+print("Initialized player");

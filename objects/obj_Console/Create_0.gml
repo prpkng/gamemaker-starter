@@ -3,7 +3,7 @@ is_enabled = false;
 global.commands = []
 buffered_lines = []
 
-AddConsoleCommand(new ConsoleCommand("help", "Shows a list of commands", function () {
+AddConsoleCommand(new ConsoleCommand("help", ["?"], "Shows a list of commands", function () {
     print("WOW");
     
     var _text = "Commands:\n";
@@ -17,11 +17,11 @@ AddConsoleCommand(new ConsoleCommand("help", "Shows a list of commands", functio
 }))
 
 
-AddConsoleCommand(new ConsoleCommand("quit", "Close the application", function () {
+AddConsoleCommand(new ConsoleCommand("quit", ["exit"], "Close the application", function () {
     game_end();
 }))
 
-AddConsoleCommand(new ConsoleCommand("restart", "Restart the current room", function () {
+AddConsoleCommand(new ConsoleCommand("restart", ["r"], "Restart the current room", function () {
     room_goto(room);
 }))
 
@@ -45,7 +45,7 @@ function submit_text(text) {
     var _output = ""
     
     for (var i = 0; i < array_length(global.commands); i++) {
-    	if global.commands[i].name == text {
+    	if global.commands[i].name == text or array_contains(global.commands[i].aliases, text) {
             var _tmp = global.commands[i].on_execute();
             
             if _tmp == undefined {

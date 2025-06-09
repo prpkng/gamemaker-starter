@@ -5,8 +5,8 @@
   "isDnD":false,
   "name":"AddConsoleCommand",
   "parent":{
-    "name":"Plugins",
-    "path":"folders/Plugins.yy",
+    "name":"Console",
+    "path":"folders/Plugins/Console.yy",
   },
   "resourceType":"GMScript",
   "resourceVersion":"2.0",

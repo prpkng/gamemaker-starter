@@ -5,9 +5,9 @@ varying vec2 v_vTexcoord;
 varying vec4 v_vColour;
 
 #define CURVATURE 5.2
-#define CA_AMT 1.001
-#define BLUR .021
-#define PIXEL_SIZE 1.0 / 135.
+#define CA_AMT 1.003
+#define BLUR .05
+#define PIXEL_SIZE 1.0 / 90.
 
 vec4 blurDirection(vec2 uv, float amt, vec2 dir, int count) {
     return max(vec4(0.0), texture2D(gm_BaseTexture, uv + dir * vec2( amt / float(count),  amt / float(count))) - vec4(0.6)) / (4. * float(count));

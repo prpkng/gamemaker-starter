@@ -5,8 +5,8 @@
   "isDnD":false,
   "name":"__InputConfigVerbs",
   "parent":{
-    "name":"Extensions",
-    "path":"folders/Extensions.yy",
+    "name":"Config",
+    "path":"folders/Extensions/Input/Config.yy",
   },
   "resourceType":"GMScript",
   "resourceVersion":"2.0",

@@ -6,7 +6,7 @@
   "name":"scribble_rgb_to_bgr",
   "parent":{
     "name":"Legacy",
-    "path":"folders/Scribble/Legacy.yy",
+    "path":"folders/Extensions/Scribble/Legacy.yy",
   },
   "resourceType":"GMScript",
   "resourceVersion":"2.0",
