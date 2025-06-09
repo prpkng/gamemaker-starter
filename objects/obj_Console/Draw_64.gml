@@ -12,7 +12,7 @@ var cur_y = _height - 34;
 
 for (var i = array_length(buffered_lines)-1; i>=0; i--) {
     var buffer_txt = scribble("[fnt_Monogram][scale,2]"+buffered_lines[i]);
-    buffer_txt = buffer_txt.wrap(window_get_width()/2.0, 300);
+    buffer_txt = buffer_txt.wrap(window_get_width()*.8, 300);
     cur_y -= buffer_txt.get_height();
     buffer_txt.draw(8, cur_y);	
 }
@@ -30,12 +30,18 @@ draw_rectangle_lines(2, _height-28, _width-2, _height-2, 2, c_white);
 if string_length(input_text) > 0 {
     var _completion = "";
     for (var i = 0; i < array_length(global.commands); i++) {
-        var _cmd = global.commands[i].name;
+        var _command = global.commands[i];
+        var _texts = [_command.name];
+        _texts = array_concat(_texts, _command.aliases);
+
         
-        // Using this to ensure completion only from start of the word
-        // (yes, it's kinda ugly and maybe I'll improve this later)
-        if string_count("```"+input_text, "```"+_cmd) > 0 {
-         	_completion = _cmd;
+        for (var j = 0; j < array_length(_texts); j++) {
+            var _cmd = _texts[j];
+            // Using this to ensure completion only from start of the word
+            // (yes, it's kinda ugly and maybe I'll improve this later)
+            if string_count("```"+input_text, "```"+_cmd) > 0 {
+             	_completion = _cmd;
+            }
         }
     }
 

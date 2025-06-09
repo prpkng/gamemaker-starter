@@ -1,31 +1,8 @@
 is_enabled = false;
 
-global.commands = []
 buffered_lines = []
 
-AddConsoleCommand(new ConsoleCommand("help", ["?"], "Shows a list of commands", function () {
-    print("WOW");
-    
-    var _text = "Commands:\n";
-    
-    for (var i = 0; i < array_length(global.commands); i++) {
-    	_text += "  [c_yellow]" + global.commands[i].name + "[/c] - ";
-        _text += global.commands[i].description + "\n";
-    }
-    
-    return _text;
-}))
-
-
-AddConsoleCommand(new ConsoleCommand("quit", ["exit"], "Close the application", function () {
-    game_end();
-}))
-
-AddConsoleCommand(new ConsoleCommand("restart", ["r"], "Restart the current room", function () {
-    room_goto(room);
-}))
-
-
+last_input = ""
 input_text = "";
 
 supported_chars = [
@@ -63,6 +40,8 @@ function submit_text(text) {
     }
     
     array_push(buffered_lines, _output);
+    
+    last_input = text;
 }
 
 function handle_basic_input_box() { 

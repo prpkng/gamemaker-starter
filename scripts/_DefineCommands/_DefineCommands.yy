@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"_DefineCommands",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"_DefineCommands",
+  "parent":{
+    "name":"Console",
+    "path":"folders/Plugins/Console.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}
