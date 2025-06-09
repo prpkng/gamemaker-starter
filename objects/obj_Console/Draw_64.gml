@@ -31,7 +31,10 @@ if string_length(input_text) > 0 {
     var _completion = "";
     for (var i = 0; i < array_length(global.commands); i++) {
         var _cmd = global.commands[i].name;
-        if string_count(input_text, _cmd) > 0 {
+        
+        // Using this to ensure completion only from start of the word
+        // (yes, it's kinda ugly and maybe I'll improve this later)
+        if string_count("```"+input_text, "```"+_cmd) > 0 {
          	_completion = _cmd;
         }
     }
